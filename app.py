@@ -1,39 +1,39 @@
-import os
-from flask import Flask, request, jsonify
-from mpesa_handler import MpesaHandler
-from dotenv import load_dotenv
+from flask import Flask, jsonify, request
+from flask_cors import CORS
+from config import Config
+from models import db, Payment, Event
+from flask_migrate import Migrate
+from routes.payments import payments_bp
+from routes.events import events_bp
+from routes.index import index_bp
+from utils.email_utils import send_email_with_qr_code
 
-load_dotenv()  # Load environment variables from .env file
+def create_app():
+    app = Flask(__name__, instance_relative_config=True)
+    app.config.from_object(Config)
+    CORS(app)
 
-app = Flask(__name__)
+    db.init_app(app)
+    migrate = Migrate(app, db)  # Initialize Flask-Migrate
 
-consumer_key = os.getenv("CONSUMER_KEY")
-consumer_secret = os.getenv("CONSUMER_SECRET")
-shortcode = os.getenv("SHORTCODE")
-passkey = os.getenv("PASSKEY")
-callback_url = os.getenv("CALLBACK_URL")
+    app.register_blueprint(payments_bp)
+    app.register_blueprint(events_bp)
+    app.register_blueprint(index_bp)
 
-mpesa = MpesaHandler(consumer_key, consumer_secret, shortcode, passkey)
+    
 
-@app.route('/')
-def home():
-    return "Flask App is running"
+    @app.route('/send_emails', methods=['POST'])
+    def send_emails():
+        payments = Payment.query.all()
+        event = request.json
+        for payment in payments:
+            send_email_with_qr_code(payment.name, payment.email, event)
+        return jsonify({'message': 'Emails sent successfully'}), 200
 
-@app.route('/initiate-payment', methods=['POST'])
-def initiate_payment():
-    data = request.json
-    phone = data.get('phone')
-    amount = data.get('amount')
-    response = mpesa.lipa_na_mpesa_online(phone, amount, callback_url)
-    return jsonify(response)
+    return app
 
-@app.route('/callback', methods=['POST'])
-def callback():
-    data = request.json
-    # Log the callback data to verify
-    print("Callback received:", data)
-    # Process the callback data here
-    return jsonify({"ResultCode": 0, "ResultDesc": "Accepted"})
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=3400, debug=True)
+if __name__ == '__main__':
+    app = create_app()
+    with app.app_context():
+        db.create_all()  # Create database tables if they don't exist
+    app.run(port=Config.PORT, debug=True)
