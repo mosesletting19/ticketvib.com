@@ -8,6 +8,7 @@ from routes.events import events_bp
 from routes.index import index_bp
 from utils.email_utils import send_email_with_qr_code
 
+
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(Config)
@@ -36,4 +37,4 @@ if __name__ == '__main__':
     app = create_app()
     with app.app_context():
         db.create_all()  # Create database tables if they don't exist
-    app.run(port=Config.PORT, debug=True)
+    app.run( host='0.0.0.0', port=5555, debug=True)
