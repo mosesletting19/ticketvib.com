@@ -12,5 +12,5 @@ class Config:
     SHORTCODE = os.getenv("SHORTCODE")
     PASSKEY = os.getenv("PASSKEY")
     CALLBACK_URL = os.getenv("CALLBACK_URL")
-    PORT = int(os.getenv("PORT", 5000))
+    PORT = int(os.getenv("PORT", 5555))
     UPLOAD_FOLDER = 'static/uploads'
